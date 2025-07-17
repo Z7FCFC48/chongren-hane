@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>虫人阿钿：虫晶之路</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <canvas id="game" width="800" height="400"></canvas>
+  <div id="ui">虫晶: <span id="score">0</span></div>
+  <div id="buttons">
+    <button id="btn-left">←</button>
+    <button id="btn-jump">跳跃</button>
+    <button id="btn-right">→</button>
+    <button id="btn-dash">冲刺</button>
+  </div>
+<script>
+/* —— 游戏逻辑开始 —— */
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+let score = 0;
+let player = { x:100, y:300, width:30, height:40, dx:0, dy:0, grounded:false, dash:0 };
+const gravity = 0.5;
+const keys = { left:false, right:false, jump:false, dash:false };
+const platforms = [
+  {x:0, y:350, width:800, height:50},
+  {x:300, y:250, width:100, height:10},
+  {x:500, y:180, width:80, height:10}
+];
+const crystals = [
+  {x:320, y:220, collected:false},
+  {x:520, y:150, collected:false}
+];
+const enemies = [{x:600, y:310, width:30, height:40, dir:1}];
+
+document.addEventListener("keydown", (e)=> {
+  if(e.code==="ArrowLeft") keys.left=true;
+  if(e.code==="ArrowRight") keys.right=true;
+  if(e.code==="Space") keys.jump=true;
+  if(e.code==="ShiftLeft") keys.dash=true;
+});
+document.addEventListener("keyup", (e)=> {
+  if(e.code==="ArrowLeft") keys.left=false;
+  if(e.code==="ArrowRight") keys.right=false;
+  if(e.code==="Space") keys.jump=false;
+  if(e.code==="ShiftLeft") keys.dash=false;
+});
+
+["btn-left","btn-right","btn-jump","btn-dash"].forEach(id=>{
+  const btn=document.getElementById(id);
+  btn.ontouchstart=()=> keys[id.split("-")[1]]=true;
+  btn.ontouchend=()=> keys[id.split("-")[1]]=false;
+});
+
+function update() {
+  player.dx = keys.left ? -2 : keys.right ? 2 : 0;
+  if(keys.jump && player.grounded) { player.dy=-10; player.grounded=false; }
+  if(keys.dash && player.dash<=0) { player.dx*=5; player.dash=30; }
+  player.dy += gravity;
+  player.x += player.dx;
+  player.y += player.dy;
+  player.grounded = false;
+
+  platforms.forEach(p=>{
+    if(player.x+player.width > p.x && player.x < p.x+p.width &&
+       player.y+player.height > p.y && player.y+player.height < p.y+10 && player.dy>=0) {
+      player.y = p.y - player.height;
+      player.dy = 0;
+      player.grounded = true;
+      player.dash = 0;
+    }
+  });
+
+  crystals.forEach(c=>{
+    if(!c.collected &&
+       player.x < c.x+20 && player.x+player.width>c.x &&
+       player.y < c.y+20 && player.y+player.height>c.y) {
+      c.collected = true;
+      score++;
+      document.getElementById("score").innerText = score;
+    }
+  });
+
+  enemies.forEach(e=>{
+    e.x += e.dir;
+    if(e.x <= 550 || e.x >= 700) e.dir *= -1;
+    if(player.x < e.x+e.width && player.x+player.width > e.x &&
+       player.y < e.y+e.height && player.y+player.height>e.y) {
+      alert("你被虫敌击败了！");
+      location.reload();
+    }
+  });
+
+  if(player.dash > 0) player.dash--;
+}
+
+function draw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = "#111"; ctx.fillRect(0,0,canvas.width,canvas.height);
+  ctx.fillStyle = "#444"; platforms.forEach(p=>ctx.fillRect(p.x,p.y,p.width,p.height));
+  ctx.fillStyle = "#ff99aa"; ctx.fillRect(player.x,player.y,player.width,player.height);
+  ctx.fillStyle = "red"; crystals.forEach(c=>{ if(!c.collected) ctx.fillRect(c.x,c.y,20,20); });
+  ctx.fillStyle = "green"; enemies.forEach(e=>ctx.fillRect(e.x,e.y,e.width,e.height));
+}
+
+function loop() { update(); draw(); requestAnimationFrame(loop); }
+loop();
+/* —— 游戏逻辑结束 —— */
+</script>
+</body>
+</html>
